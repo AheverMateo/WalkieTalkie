@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import socket from "../socket";
 import { IoSettingsOutline } from "react-icons/io5";
+import { IoIosAdd } from "react-icons/io";
 import SettingModal from "./SettingModal";
+import RoomsModal from "./RoomsModal";
 import useSoundStore from "../zustand/useSoundStore";
 
 const WalkieTalkie = () => {
@@ -14,6 +16,7 @@ const WalkieTalkie = () => {
   const [recordingUser, setRecordingUser] = useState(null)
   const [audioHistory, setAudioHistory] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isModalRoom, setIsModalRoom] = useState(false)
   
 
   const { playSound, } = useSoundStore();
@@ -179,13 +182,21 @@ const WalkieTalkie = () => {
       ) : (
         <div className="flex justify-evenly h-screen">
           <div className="h-10 mt-8 px-2 py-1 border border-zinc-200 rounded-md">
-            <IoSettingsOutline onClick={() => setIsModalOpen(true)} size={30} />
+            <IoSettingsOutline onClick={() => setIsModalOpen(true)} size={30} className="cursor-pointer" />
             {isModalOpen && (
-              <SettingModal onClose={() => setIsModalOpen(false)} user={user} />
+              <SettingModal onClose={() => setIsModalOpen(false)}/>
             )}
           </div>
           <div className="flex flex-col gap-8 mt-24 w-80 h-max px-8 py-5 border border-zinc-200 rounded-md">
+              <div className="flex justify-between">
               <h1 className="font-bold text-2xl text-[#001323]">Canales</h1>
+              { user.isAdmin &&(
+                <IoIosAdd onClick={()=>setIsModalRoom(true)} size={38} color="#001323" className="pt-1 cursor-pointer"/>
+                )}
+              {isModalRoom && (
+                <RoomsModal onClose={() => setIsModalRoom(false)}/>
+              )}
+              </div>
             <div className="flex flex-col gap-1.5">
               {rooms.map((room, index) => (
                 <button

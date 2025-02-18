@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { FiBell } from "react-icons/fi";
 import useSoundStore from "../zustand/useSoundStore";
-import socket from "../socket";
 
-const SettingModal = ({ onClose, user }) => {
+const SettingModal = ({ onClose }) => {
   const { selectedSounds, setSoundPreference, playSound } = useSoundStore();
   const [tempSelectedSounds, setTempSelectedSounds] = useState(selectedSounds);
-  const [newRoom, setNewRoom] = useState("");
-  const { isAdmin } = user;
 
   const optionSound = ["Default", "Sonido 1", "Sonido 2", "Sonido 3"];
 
@@ -45,12 +42,6 @@ const SettingModal = ({ onClose, user }) => {
     Object.entries(tempSelectedSounds).forEach(([key, value]) => {
       setSoundPreference(key, value);
     });
-
-    if (newRoom.trim()) {
-      socket.emit("createRoom", newRoom);
-      setNewRoom(""); 
-    }
-
     onClose();
   };
 
@@ -92,20 +83,6 @@ const SettingModal = ({ onClose, user }) => {
             </div>
           ))}
         </div>
-
-        {isAdmin && (
-          <div className="flex flex-col mt-4">
-            <h3 className="font-bold text-lg mb-2">Crear un canal:</h3>
-              <input
-                type="text"
-                className="py-1 px-2 border rounded-md flex-grow"
-                placeholder="Nombre del canal"
-                value={newRoom}
-                onChange={(e) => setNewRoom(e.target.value)}
-              />
-          </div>
-        )}
-
         <div className="flex justify-end mt-6 gap-3">
           <button
             onClick={onClose}

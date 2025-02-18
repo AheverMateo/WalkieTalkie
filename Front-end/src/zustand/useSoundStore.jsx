@@ -1,10 +1,10 @@
 import { create } from "zustand"
 
 const soundFiles = {
-  Default: "../../audio/sonido default.mp3",
-  "Sonido 1": "../../audio/sonido 1.mp3",
-  "Sonido 2": "../../audio/sonido 2.mp3",
-  "Sonido 3": "../../audio/sonido 3.mp3",
+  Default: "../../public/audio/sonido_default.mp3",
+  "Sonido 1": "../../public/audio/sonido_1.mp3",
+  "Sonido 2": "../../public/audio/sonido_2.mp3",
+  "Sonido 3": "../../public/audio/sonido_3.mp3",
 };
 
 const useSoundStore = create((set) => ({
