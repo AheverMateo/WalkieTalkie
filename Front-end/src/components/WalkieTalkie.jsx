@@ -58,7 +58,6 @@ const WalkieTalkie = () => {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
 
-      // Actualizar el historial con el nuevo audio, nombre de usuario y fecha
       setAudioHistory((prev) => [
         ...prev,
         { blob: audioBlob, userName, timestamp },
@@ -75,11 +74,21 @@ const WalkieTalkie = () => {
       setCurrentAudio(audio);
     };
 
+    const handleUserStartedTalking = (userName) => {
+      setRecordingUser(userName);
+    };
+  
+    const handleUserStoppedTalking = () => {
+      setRecordingUser(null);
+    };
+
     socket.on("userValidated", handleUserValidated);
     socket.on("roomsList", handleRoomsList);
     socket.on("usersInRoom", handleUsersInRoom);
     socket.on("audioHistory", handleAudioHistory);
     socket.on("receiveAudio", handleReceiveAudio);
+    socket.on("userStartedTalking", handleUserStartedTalking);
+    socket.on("userStoppedTalking", handleUserStoppedTalking);
 
     return () => {
       socket.off("userValidated", handleUserValidated);
@@ -87,6 +96,8 @@ const WalkieTalkie = () => {
       socket.off("usersInRoom", handleUsersInRoom);
       socket.off("audioHistory", handleAudioHistory);
       socket.off("receiveAudio", handleReceiveAudio);
+      socket.off("userStartedTalking", handleUserStartedTalking);
+      socket.off("userStoppedTalking", handleUserStoppedTalking);
     };
   }, [currentAudio]);
 
@@ -146,12 +157,17 @@ const WalkieTalkie = () => {
   }, [selectedRoom]);
 
   const startRecording = (userName) => {
+    if (recordingUser && recordingUser !== userName) {
+      console.warn("Otro usuario ya está hablando.");
+      return;
+    }
     playSound("recording")
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
     }
+    socket.emit("userStartedTalking", selectedRoom, userName);
   };
 
   const stopRecording = () => {
@@ -159,6 +175,7 @@ const WalkieTalkie = () => {
       mediaRecorderRef.current.stop();
       setRecordingUser(null);
     }
+    socket.emit("userStoppedTalking", selectedRoom);
   };
 
   return (
@@ -291,7 +308,7 @@ const WalkieTalkie = () => {
                   key={index}
                   className={`p-2 border rounded-md border-zinc-200 ${
                     recordingUser === u.userName
-                      ? "bg-red-200"
+                      ? "bg-blue-200"
                       : "bg-transparent"
                   }`}
                 >
