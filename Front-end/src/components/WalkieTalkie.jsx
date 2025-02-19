@@ -82,6 +82,10 @@ const WalkieTalkie = () => {
       setRecordingUser(null);
     };
 
+    const handleMicrophoneBlocked = (talkingUser) => {
+      alert(`Espera tu turno, ${talkingUser} está hablando.`);
+    };
+
     socket.on("userValidated", handleUserValidated);
     socket.on("roomsList", handleRoomsList);
     socket.on("usersInRoom", handleUsersInRoom);
@@ -89,6 +93,7 @@ const WalkieTalkie = () => {
     socket.on("receiveAudio", handleReceiveAudio);
     socket.on("userStartedTalking", handleUserStartedTalking);
     socket.on("userStoppedTalking", handleUserStoppedTalking);
+     socket.on("microphoneBlocked", handleMicrophoneBlocked);
 
     return () => {
       socket.off("userValidated", handleUserValidated);
@@ -98,6 +103,7 @@ const WalkieTalkie = () => {
       socket.off("receiveAudio", handleReceiveAudio);
       socket.off("userStartedTalking", handleUserStartedTalking);
       socket.off("userStoppedTalking", handleUserStoppedTalking);
+      socket.off("microphoneBlocked", handleMicrophoneBlocked);
     };
   }, [currentAudio]);
 
@@ -158,7 +164,7 @@ const WalkieTalkie = () => {
 
   const startRecording = (userName) => {
     if (recordingUser && recordingUser !== userName) {
-      console.warn("Otro usuario ya está hablando.");
+      alert("Espera tu turno para hablar.");
       return;
     }
     playSound("recording")

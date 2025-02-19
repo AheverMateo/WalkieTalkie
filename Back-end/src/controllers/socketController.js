@@ -3,6 +3,7 @@ const User = require("../models/User");
 const usersInRooms = {};
 const audioHistory = {};
 const rooms = ["Room1", "Room2", "Room3"];
+const roomSpeakers = {};
 
 const socketController = (io) => {
   io.on("connection", (socket) => {
@@ -15,13 +16,18 @@ const socketController = (io) => {
         io.emit("roomsList", rooms);
       }
     });
-
-    socket.on("userStartedTalking", (room, userName) => {
-      socket.to(room).emit("userStartedTalking", userName);
-    });
   
     socket.on("userStoppedTalking", (room) => {
       socket.to(room).emit("userStoppedTalking");
+    });
+
+    socket.on("userStartedTalking", (room, userName) => {
+      if (!roomSpeakers[room]) {
+        roomSpeakers[room] = userName;
+        io.to(room).emit("userStartedTalking", userName);
+      } else {
+        socket.emit("microphoneBlocked", roomSpeakers[room]);
+      }
     });
 
     socket.on("deleteRoom", (roomToDelete) => {
@@ -66,7 +72,7 @@ const socketController = (io) => {
       }
 
       io.to(room).emit("usersInRoom", usersInRooms[room]);
-
+      io.to(room).emit("userStartedTalking", roomSpeakers[room] || null);
       socket.emit("message", `Bienvenido a la room: ${room}`);
     });
 
@@ -74,13 +80,11 @@ const socketController = (io) => {
       socket.leave(room);
       console.log(`Usuario ${userName} salió de la room: ${room}`);
 
-      // Eliminar al usuario de la lista de la room
       if (usersInRooms[room]) {
         usersInRooms[room] = usersInRooms[room].filter(
           (user) => user.userName !== userName
         );
 
-        // Enviar la lista actualizada de usuarios a los demás miembros de la room
         io.to(room).emit("usersInRoom", usersInRooms[room]);
       }
     });
