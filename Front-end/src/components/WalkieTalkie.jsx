@@ -17,6 +17,7 @@ const WalkieTalkie = () => {
   const [audioHistory, setAudioHistory] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isModalRoom, setIsModalRoom] = useState(false)
+  const [currentSpeaker, setCurrentSpeaker] = useState(null);
   
 
   const { playSound, } = useSoundStore();
@@ -76,14 +77,12 @@ const WalkieTalkie = () => {
 
     const handleUserStartedTalking = (userName) => {
       setRecordingUser(userName);
+      setCurrentSpeaker(userName); // Actualiza el estado para bloquear el micrófono de otros usuarios
     };
   
     const handleUserStoppedTalking = () => {
       setRecordingUser(null);
-    };
-
-    const handleMicrophoneBlocked = (talkingUser) => {
-      alert(`Espera tu turno, ${talkingUser} está hablando.`);
+      setCurrentSpeaker(null); // Libera el turno
     };
 
     socket.on("userValidated", handleUserValidated);
@@ -93,7 +92,6 @@ const WalkieTalkie = () => {
     socket.on("receiveAudio", handleReceiveAudio);
     socket.on("userStartedTalking", handleUserStartedTalking);
     socket.on("userStoppedTalking", handleUserStoppedTalking);
-     socket.on("microphoneBlocked", handleMicrophoneBlocked);
 
     return () => {
       socket.off("userValidated", handleUserValidated);
@@ -103,7 +101,6 @@ const WalkieTalkie = () => {
       socket.off("receiveAudio", handleReceiveAudio);
       socket.off("userStartedTalking", handleUserStartedTalking);
       socket.off("userStoppedTalking", handleUserStoppedTalking);
-      socket.off("microphoneBlocked", handleMicrophoneBlocked);
     };
   }, [currentAudio]);
 
@@ -163,25 +160,28 @@ const WalkieTalkie = () => {
   }, [selectedRoom]);
 
   const startRecording = (userName) => {
-    if (recordingUser && recordingUser !== userName) {
-      alert("Espera tu turno para hablar.");
+    if (currentSpeaker) {
+      alert("Alguien ya está hablando. Espera tu turno.");
       return;
     }
-    playSound("recording")
+  
+    playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
+      setCurrentSpeaker(userName); // Establece al usuario actual como el que está hablando
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
+      socket.emit("userStartedTalking", selectedRoom, userName);
     }
-    socket.emit("userStartedTalking", selectedRoom, userName);
   };
-
+  
   const stopRecording = () => {
     if (mediaRecorderRef.current && selectedRoom) {
       mediaRecorderRef.current.stop();
       setRecordingUser(null);
+      setCurrentSpeaker(null); // Libera el turno
+      socket.emit("userStoppedTalking", selectedRoom);
     }
-    socket.emit("userStoppedTalking", selectedRoom);
   };
 
   return (
@@ -294,6 +294,7 @@ const WalkieTalkie = () => {
                       onMouseUp={stopRecording}
                       onTouchStart={() => startRecording(u.userName)}
                       onTouchEnd={stopRecording}
+                      disabled={currentSpeaker && currentSpeaker !== u.userName}
                     >
                       {recordingUser === username
                         ? "Microfono Activado"

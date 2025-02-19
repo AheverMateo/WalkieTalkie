@@ -3,7 +3,6 @@ const User = require("../models/User");
 const usersInRooms = {};
 const audioHistory = {};
 const rooms = ["Room1", "Room2", "Room3"];
-const roomSpeakers = {};
 
 const socketController = (io) => {
   io.on("connection", (socket) => {
@@ -16,20 +15,15 @@ const socketController = (io) => {
         io.emit("roomsList", rooms);
       }
     });
-  
+
     socket.on("userStoppedTalking", (room) => {
       socket.to(room).emit("userStoppedTalking");
     });
 
     socket.on("userStartedTalking", (room, userName) => {
-      if (!roomSpeakers[room]) {
-        roomSpeakers[room] = userName;
         io.to(room).emit("userStartedTalking", userName);
-      } else {
-        socket.emit("microphoneBlocked", roomSpeakers[room]);
-      }
     });
-
+    
     socket.on("deleteRoom", (roomToDelete) => {
       if (!rooms.includes(roomToDelete)) return;
 
@@ -72,7 +66,6 @@ const socketController = (io) => {
       }
 
       io.to(room).emit("usersInRoom", usersInRooms[room]);
-      io.to(room).emit("userStartedTalking", roomSpeakers[room] || null);
       socket.emit("message", `Bienvenido a la room: ${room}`);
     });
 
