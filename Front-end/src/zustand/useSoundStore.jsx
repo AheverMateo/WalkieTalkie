@@ -1,10 +1,10 @@
 import { create } from "zustand"
 
 const soundFiles = {
-  Default: "../../public/audio/sonido_default.mp3",
-  "Sonido 1": "../../public/audio/sonido_1.mp3",
-  "Sonido 2": "../../public/audio/sonido_2.mp3",
-  "Sonido 3": "../../public/audio/sonido_3.mp3",
+  Default: "/audio/sonido_default.mp3",
+  "Sonido 1": "/audio/sonido_1.mp3",
+  "Sonido 2": "/audio/sonido_2.mp3",
+  "Sonido 3": "/audio/sonido_3.mp3",
 };
 
 const useSoundStore = create((set) => ({
@@ -29,3 +29,11 @@ const useSoundStore = create((set) => ({
   }));
   
   export default useSoundStore;
+
+
+  // const soundFiles = {
+  //   Default: "../../public/audio/sonido_default.mp3",
+  //   "Sonido 1": "../../public/audio/sonido_1.mp3",
+  //   "Sonido 2": "../../public/audio/sonido_2.mp3",
+  //   "Sonido 3": "../../public/audio/sonido_3.mp3",
+  // };
