@@ -54,35 +54,40 @@ const WalkieTalkie = () => {
         currentAudio.pause();
         currentAudio.currentTime = 0;
       }
-
+    
       const audioBlob = new Blob([audioData], { type: "audio/wav" });
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-
+    
       setAudioHistory((prev) => [
         ...prev,
         { blob: audioBlob, userName, timestamp },
       ]);
-
+    
+      setRecordingUser(userName);
+      setCurrentSpeaker(userName);
+    
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
+        setRecordingUser(null);
+        setCurrentSpeaker(null);
       };
-
+    
       audio.play().catch((error) => {
         console.error("Error reproduciendo el audio:", error);
       });
-
+    
       setCurrentAudio(audio);
     };
 
     const handleUserStartedTalking = (userName) => {
       setRecordingUser(userName);
-      setCurrentSpeaker(userName); // Actualiza el estado para bloquear el micrófono de otros usuarios
+      setCurrentSpeaker(userName); 
     };
   
     const handleUserStoppedTalking = () => {
       setRecordingUser(null);
-      setCurrentSpeaker(null); // Libera el turno
+      setCurrentSpeaker(null); 
     };
 
     socket.on("userValidated", handleUserValidated);
@@ -164,11 +169,10 @@ const WalkieTalkie = () => {
       alert("Alguien ya está hablando. Espera tu turno.");
       return;
     }
-  
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
-      setCurrentSpeaker(userName); // Establece al usuario actual como el que está hablando
+      setCurrentSpeaker(userName); 
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
       socket.emit("userStartedTalking", selectedRoom, userName);
@@ -179,7 +183,7 @@ const WalkieTalkie = () => {
     if (mediaRecorderRef.current && selectedRoom) {
       mediaRecorderRef.current.stop();
       setRecordingUser(null);
-      setCurrentSpeaker(null); // Libera el turno
+      setCurrentSpeaker(null);
       socket.emit("userStoppedTalking", selectedRoom);
     }
   };
