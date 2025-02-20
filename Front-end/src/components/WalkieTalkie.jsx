@@ -64,13 +64,13 @@ const WalkieTalkie = () => {
         { blob: audioBlob, userName, timestamp },
       ]);
     
-      setRecordingUser(userName);
+      setRecordingUser(userName); 
       setCurrentSpeaker(userName);
     
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
-        setRecordingUser(null);
-        setCurrentSpeaker(null);
+        setRecordingUser(null); 
+        setCurrentSpeaker(null); 
       };
     
       audio.play().catch((error) => {
@@ -80,23 +80,11 @@ const WalkieTalkie = () => {
       setCurrentAudio(audio);
     };
 
-    const handleUserStartedTalking = (userName) => {
-      setRecordingUser(userName);
-      setCurrentSpeaker(userName); 
-    };
-  
-    const handleUserStoppedTalking = () => {
-      setRecordingUser(null);
-      setCurrentSpeaker(null); 
-    };
-
     socket.on("userValidated", handleUserValidated);
     socket.on("roomsList", handleRoomsList);
     socket.on("usersInRoom", handleUsersInRoom);
     socket.on("audioHistory", handleAudioHistory);
     socket.on("receiveAudio", handleReceiveAudio);
-    socket.on("userStartedTalking", handleUserStartedTalking);
-    socket.on("userStoppedTalking", handleUserStoppedTalking);
 
     return () => {
       socket.off("userValidated", handleUserValidated);
@@ -104,8 +92,6 @@ const WalkieTalkie = () => {
       socket.off("usersInRoom", handleUsersInRoom);
       socket.off("audioHistory", handleAudioHistory);
       socket.off("receiveAudio", handleReceiveAudio);
-      socket.off("userStartedTalking", handleUserStartedTalking);
-      socket.off("userStoppedTalking", handleUserStoppedTalking);
     };
   }, [currentAudio]);
 
@@ -175,16 +161,14 @@ const WalkieTalkie = () => {
       setCurrentSpeaker(userName); 
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
-      socket.emit("userStartedTalking", selectedRoom, userName);
     }
   };
   
-  const stopRecording = () => {
+  const stopRecording = (userName) => {
     if (mediaRecorderRef.current && selectedRoom) {
       mediaRecorderRef.current.stop();
-      setRecordingUser(null);
-      setCurrentSpeaker(null);
-      socket.emit("userStoppedTalking", selectedRoom);
+      setRecordingUser(userName);
+      setCurrentSpeaker(userName); 
     }
   };
 
