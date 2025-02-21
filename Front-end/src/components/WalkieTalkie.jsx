@@ -18,7 +18,7 @@ const WalkieTalkie = () => {
   const [audioHistory, setAudioHistory] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalRoom, setIsModalRoom] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const { playSound } = useSoundStore();
 
@@ -65,12 +65,12 @@ const WalkieTalkie = () => {
       ]);
 
       setRecordingUser(userName);
-      setIsAudioPlaying(true); 
+      setIsAudioPlaying(true);
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setRecordingUser(null);
-        setIsAudioPlaying(false); 
+        setIsAudioPlaying(false);
       };
 
       audio.play().catch((error) => {
@@ -155,7 +155,7 @@ const WalkieTalkie = () => {
       alert("Alguien ya está hablando. Espera tu turno.");
       return;
     }
-    
+
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
@@ -283,20 +283,28 @@ const WalkieTalkie = () => {
                 (u, index) =>
                   u.userName === username && (
                     <div
-                      key={index} 
+                      key={index}
+                      style={{ touchAction: "none" }}
                       className={`flex justify-center items-center py-3 w-full px-3 mt-10 rounded-md ${
                         recordingUser === u.userName
                           ? "bg-blue-900"
                           : "bg-blue-950"
-                        } ${
-                          isAudioPlaying
-                            ? "opacity-50"
-                            : "cursor-pointer"
-                        }`}
-                        onPointerDown={() => startRecording(u.userName)}
-                        onPointerUp={stopRecording}
-                        onPointerCancel={stopRecording}
-                        disabled={isAudioPlaying}
+                      } ${isAudioPlaying ? "opacity-50" : "cursor-pointer"}`}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                        startRecording(u.userName);
+                      }}
+                      onPointerUp={(e) => {
+                        e.preventDefault();
+                        stopRecording();
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                      }}
+                      onPointerCancel={(e) => {
+                        e.preventDefault();
+                        stopRecording();
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                      }}
                     >
                       <FaMicrophone
                         size={24}
