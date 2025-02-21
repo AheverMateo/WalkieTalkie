@@ -7,20 +7,19 @@ import RoomsModal from "./RoomsModal";
 import useSoundStore from "../zustand/useSoundStore";
 
 const WalkieTalkie = () => {
-  const [username, setUsername] = useState("") //input para traer el usuario
-  const [user, setUser] = useState(null) //toda la info del usuario creado en la bdd
-  const [rooms, setRooms] = useState([]) //rooms que vienen de socket io
-  const [selectedRoom, setSelectedRoom] = useState("") //room seleccionado
-  const [usersInRoom, setUsersInRoom] = useState([]) //usuarios conectados al room
-  const [currentAudio, setCurrentAudio] = useState(null) //se envia el audio
-  const [recordingUser, setRecordingUser] = useState(null)
-  const [audioHistory, setAudioHistory] = useState([])
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isModalRoom, setIsModalRoom] = useState(false)
+  const [username, setUsername] = useState(""); //input para traer el usuario
+  const [user, setUser] = useState(null); //toda la info del usuario creado en la bdd
+  const [rooms, setRooms] = useState([]); //rooms que vienen de socket io
+  const [selectedRoom, setSelectedRoom] = useState(""); //room seleccionado
+  const [usersInRoom, setUsersInRoom] = useState([]); //usuarios conectados al room
+  const [currentAudio, setCurrentAudio] = useState(null); //se envia el audio
+  const [recordingUser, setRecordingUser] = useState(null);
+  const [audioHistory, setAudioHistory] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalRoom, setIsModalRoom] = useState(false);
   const [currentSpeaker, setCurrentSpeaker] = useState(null);
-  
 
-  const { playSound, } = useSoundStore();
+  const { playSound } = useSoundStore();
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -54,29 +53,29 @@ const WalkieTalkie = () => {
         currentAudio.pause();
         currentAudio.currentTime = 0;
       }
-    
+
       const audioBlob = new Blob([audioData], { type: "audio/wav" });
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
-    
+
       setAudioHistory((prev) => [
         ...prev,
         { blob: audioBlob, userName, timestamp },
       ]);
-    
-      setRecordingUser(userName); 
+
+      setRecordingUser(userName);
       setCurrentSpeaker(userName);
-    
+
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
-        setRecordingUser(null); 
-        setCurrentSpeaker(null); 
+        setRecordingUser(null);
+        setCurrentSpeaker(null);
       };
-    
+
       audio.play().catch((error) => {
         console.error("Error reproduciendo el audio:", error);
       });
-    
+
       setCurrentAudio(audio);
     };
 
@@ -105,7 +104,7 @@ const WalkieTalkie = () => {
     }
     setAudioHistory([]);
     setSelectedRoom(room);
-    playSound("enter")
+    playSound("enter");
     socket.emit("joinRoom", room, user.name);
     socket.emit("getAudioHistory", room);
   };
@@ -158,17 +157,17 @@ const WalkieTalkie = () => {
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
-      setCurrentSpeaker(userName); 
+      setCurrentSpeaker(userName);
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
     }
   };
-  
-  const stopRecording = (userName) => {
+
+  const stopRecording = () => {
     if (mediaRecorderRef.current && selectedRoom) {
       mediaRecorderRef.current.stop();
-      setRecordingUser(userName);
-      setCurrentSpeaker(userName); 
+      setRecordingUser(null)
+      setCurrentSpeaker(null)
     }
   };
 
@@ -193,21 +192,30 @@ const WalkieTalkie = () => {
       ) : (
         <div className="flex justify-evenly h-screen">
           <div className="h-10 mt-8 px-2 py-1 border border-zinc-200 rounded-md">
-            <IoSettingsOutline onClick={() => setIsModalOpen(true)} size={30} className="cursor-pointer" />
+            <IoSettingsOutline
+              onClick={() => setIsModalOpen(true)}
+              size={30}
+              className="cursor-pointer"
+            />
             {isModalOpen && (
-              <SettingModal onClose={() => setIsModalOpen(false)}/>
+              <SettingModal onClose={() => setIsModalOpen(false)} />
             )}
           </div>
           <div className="flex flex-col gap-8 mt-24 w-80 h-max px-8 py-5 border border-zinc-200 rounded-md">
-              <div className="flex justify-between">
+            <div className="flex justify-between">
               <h1 className="font-bold text-2xl text-[#001323]">Canales</h1>
-              { user.isAdmin &&(
-                <IoIosAdd onClick={()=>setIsModalRoom(true)} size={38} color="#001323" className="pt-1 cursor-pointer"/>
-                )}
-              {isModalRoom && (
-                <RoomsModal onClose={() => setIsModalRoom(false)}/>
+              {user.isAdmin && (
+                <IoIosAdd
+                  onClick={() => setIsModalRoom(true)}
+                  size={38}
+                  color="#001323"
+                  className="pt-1 cursor-pointer"
+                />
               )}
-              </div>
+              {isModalRoom && (
+                <RoomsModal onClose={() => setIsModalRoom(false)} />
+              )}
+            </div>
             <div className="flex flex-col gap-1.5">
               {rooms.map((room, index) => (
                 <button
@@ -273,6 +281,7 @@ const WalkieTalkie = () => {
                 (u, index) =>
                   u.userName === username && (
                     <button
+                      key={index} // Asegúrate de agregar una clave única
                       className={`py-3 w-full px-3 mt-10 rounded-md text-white ${
                         recordingUser === u.userName
                           ? "bg-blue-900"

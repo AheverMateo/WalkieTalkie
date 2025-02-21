@@ -15,14 +15,6 @@ const socketController = (io) => {
         io.emit("roomsList", rooms);
       }
     });
-
-    socket.on("userStoppedTalking", (room) => {
-      socket.to(room).emit("userStoppedTalking");
-    });
-
-    socket.on("userStartedTalking", (room, userName) => {
-        io.to(room).emit("userStartedTalking", userName);
-    });
     
     socket.on("deleteRoom", (roomToDelete) => {
       if (!rooms.includes(roomToDelete)) return;
