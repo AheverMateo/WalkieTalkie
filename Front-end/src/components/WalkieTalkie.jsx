@@ -295,8 +295,9 @@ const WalkieTalkie = () => {
                         }`}
                       onMouseDown={() => startRecording(u.userName)}
                       onMouseUp={stopRecording}
-                      // onTouchStart={() => startRecording(u.userName)}
-                      // onTouchEnd={stopRecording}
+                       onTouchStart={() => startRecording(u.userName)}
+                       onTouchEnd={stopRecording}
+                       onTouchCancel={stopRecording}
                       disabled={isAudioPlaying}
                     >
                       <FaMicrophone
