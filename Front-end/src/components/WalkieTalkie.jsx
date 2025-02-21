@@ -8,26 +8,22 @@ import RoomsModal from "./RoomsModal";
 import useSoundStore from "../zustand/useSoundStore";
 
 const WalkieTalkie = () => {
-  const [username, setUsername] = useState("");
-  const [user, setUser] = useState(null);
-  const [rooms, setRooms] = useState([]);
-  const [selectedRoom, setSelectedRoom] = useState("");
-  const [usersInRoom, setUsersInRoom] = useState([]);
-  const [currentAudio, setCurrentAudio] = useState(null);
+  const [username, setUsername] = useState(""); //input para traer el usuario
+  const [user, setUser] = useState(null); //toda la info del usuario creado en la bdd
+  const [rooms, setRooms] = useState([]); //rooms que vienen de socket io
+  const [selectedRoom, setSelectedRoom] = useState(""); //room seleccionado
+  const [usersInRoom, setUsersInRoom] = useState([]); //usuarios conectados al room
+  const [currentAudio, setCurrentAudio] = useState(null); //se envia el audio
   const [recordingUser, setRecordingUser] = useState(null);
   const [audioHistory, setAudioHistory] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalRoom, setIsModalRoom] = useState(false);
-  const [currentSpeaker, setCurrentSpeaker] = useState(null);
-  const [liveAudioPlaying, setLiveAudioPlaying] = useState(false);
-  const [isRecording, setIsRecording] = useState(false); // Nuevo estado para seguir si está grabando
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const { playSound } = useSoundStore();
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const touchTimerRef = useRef(null); // Referencia para el temporizador de seguridad
-  const touchAreaRef = useRef(null); // Referencia al área del botón
 
   useEffect(() => {
     const handleUserValidated = (data) => {
@@ -42,14 +38,6 @@ const WalkieTalkie = () => {
 
     const handleUsersInRoom = (users) => {
       setUsersInRoom(users);
-    };
-
-    const handleUserStartedRecording = (userName) => {
-      setCurrentSpeaker(userName);
-    };
-
-    const handleUserStoppedRecording = () => {
-      setCurrentSpeaker(null);
     };
 
     const handleAudioHistory = (audios) => {
@@ -77,17 +65,17 @@ const WalkieTalkie = () => {
       ]);
 
       setRecordingUser(userName);
-      setLiveAudioPlaying(true);
+      setIsAudioPlaying(true);
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setRecordingUser(null);
-        setLiveAudioPlaying(false);
+        setIsAudioPlaying(false);
       };
 
       audio.play().catch((error) => {
         console.error("Error reproduciendo el audio:", error);
-        setLiveAudioPlaying(false);
+        setIsAudioPlaying(false);
       });
 
       setCurrentAudio(audio);
@@ -98,41 +86,14 @@ const WalkieTalkie = () => {
     socket.on("usersInRoom", handleUsersInRoom);
     socket.on("audioHistory", handleAudioHistory);
     socket.on("receiveAudio", handleReceiveAudio);
-    socket.on("userStartedRecording", handleUserStartedRecording);
-    socket.on("userStoppedRecording", handleUserStoppedRecording);
-    
-    // Agregar un listener global para cancelar grabaciones en caso de errores
-    document.addEventListener('touchend', handleGlobalTouchEnd);
-    
     return () => {
       socket.off("userValidated", handleUserValidated);
       socket.off("roomsList", handleRoomsList);
       socket.off("usersInRoom", handleUsersInRoom);
       socket.off("audioHistory", handleAudioHistory);
       socket.off("receiveAudio", handleReceiveAudio);
-      socket.off("userStartedRecording", handleUserStartedRecording);
-      socket.off("userStoppedRecording", handleUserStoppedRecording);
-      
-      // Limpiar el listener global
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
-      
-      // Limpiar el temporizador si existe
-      if (touchTimerRef.current) {
-        clearTimeout(touchTimerRef.current);
-      }
     };
   }, [currentAudio]);
-
-  // Manejador global para touchend como respaldo
-  const handleGlobalTouchEnd = (e) => {
-    // Solo intervenir si está grabando actualmente
-    if (isRecording) {
-      // Verificar si el toque termina fuera del botón
-      if (touchAreaRef.current && !touchAreaRef.current.contains(e.target)) {
-        stopRecording();
-      }
-    }
-  };
 
   const handleSubmit = () => {
     socket.emit("userValidate", username);
@@ -190,76 +151,26 @@ const WalkieTalkie = () => {
   }, [selectedRoom]);
 
   const startRecording = (userName) => {
-    if (liveAudioPlaying) {
-      alert("Se está reproduciendo un audio en vivo. Espera a que termine.");
+    if (isAudioPlaying) {
+      alert("Alguien ya está hablando. Espera tu turno.");
       return;
     }
-    
+
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
-      setIsRecording(true);
       setRecordingUser(userName);
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
-      socket.emit("userStartedRecording", selectedRoom, userName);
-      
-      // Configurar un temporizador de seguridad (máximo 30 segundos)
-      touchTimerRef.current = setTimeout(() => {
-        if (isRecording) {
-          console.log("Temporizador de seguridad activado - deteniendo grabación");
-          stopRecording();
-        }
-      }, 30000);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && selectedRoom && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        mediaRecorderRef.current.stop();
-        setRecordingUser(null);
-        setIsRecording(false);
-        socket.emit("userStoppedRecording", selectedRoom);
-        
-        // Limpiar el temporizador de seguridad
-        if (touchTimerRef.current) {
-          clearTimeout(touchTimerRef.current);
-          touchTimerRef.current = null;
-        }
-      } catch (error) {
-        console.error("Error al detener la grabación:", error);
-      }
+    if (mediaRecorderRef.current && selectedRoom) {
+      mediaRecorderRef.current.stop();
+      setRecordingUser(null);
     }
   };
-
-  // Nuevos manejadores específicos para eventos táctiles
-  const handleTouchStart = (userName) => {
-    startRecording(userName);
-  };
-
-  const handleTouchEnd = () => {
-    stopRecording();
-  };
-
-  // Manejador para cuando el dedo se sale del área del botón
-  const handleTouchMove = (e) => {
-    if (isRecording) {
-      // Obtener la posición y dimensiones del botón
-      const buttonRect = e.currentTarget.getBoundingClientRect();
-      const touch = e.touches[0];
-      
-      // Verificar si el toque está fuera del área del botón
-      if (
-        touch.clientX < buttonRect.left ||
-        touch.clientX > buttonRect.right ||
-        touch.clientY < buttonRect.top ||
-        touch.clientY > buttonRect.bottom
-      ) {
-        // El dedo se salió del botón, detener grabación
-        stopRecording();
-      }
-    }
-  };
+  
 
   return (
     <div>
@@ -354,7 +265,9 @@ const WalkieTalkie = () => {
                               controls
                               src={audioUrl}
                               className="w-full"
-                              onEnded={() => URL.revokeObjectURL(audioUrl)}
+                              onEnded={() => {
+                                URL.revokeObjectURL(audioUrl);
+                              }}
                             />
                             <span className="text-xs text-gray-500 ml-2">
                               {audio.duration ? `0:${audio.duration}` : ""}
@@ -372,28 +285,26 @@ const WalkieTalkie = () => {
                   u.userName === username && (
                     <div
                       key={index}
-                      ref={touchAreaRef}
                       className={`flex justify-center items-center py-3 w-full px-3 mt-10 rounded-md ${
                         recordingUser === u.userName
                           ? "bg-blue-900"
                           : "bg-blue-950"
-                        } ${
-                          liveAudioPlaying
-                            ? "opacity-50 cursor-not-allowed"
-                            : "cursor-pointer"
-                        }`}
-                      // Eventos para desktop (mouse)
+                      } ${isAudioPlaying ? "opacity-50" : "cursor-pointer"}`}
                       onMouseDown={() => startRecording(u.userName)}
                       onMouseUp={stopRecording}
-                      onMouseLeave={isRecording ? stopRecording : undefined}
-                      
-                      // Eventos para móviles (touch)
-                      onTouchStart={() => handleTouchStart(u.userName)}
-                      onTouchEnd={handleTouchEnd}
-                      onTouchCancel={handleTouchEnd}
-                      onTouchMove={handleTouchMove}
-                      
-                      disabled={liveAudioPlaying}
+                      onTouchStart={(e) => {
+                        e.preventDefault()
+                        startRecording(u.userName);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        stopRecording();
+                      }}
+                      onTouchCancel={(e) => {
+                        e.preventDefault();
+                        stopRecording();
+                      }}
+                      disabled={isAudioPlaying}
                     >
                       <FaMicrophone
                         size={24}
