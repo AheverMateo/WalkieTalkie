@@ -39,6 +39,14 @@ const WalkieTalkie = () => {
       setUsersInRoom(users);
     };
 
+    const handleUserStartedRecording = (userName) => {
+      setCurrentSpeaker(userName);
+    };
+  
+    const handleUserStoppedRecording = () => {
+      setCurrentSpeaker(null);
+    };
+
     const handleAudioHistory = (audios) => {
       const updatedHistory = audios.map((audioInfo) => ({
         blob: new Blob([audioInfo.audioData], { type: "audio/wav" }),
@@ -84,13 +92,16 @@ const WalkieTalkie = () => {
     socket.on("usersInRoom", handleUsersInRoom);
     socket.on("audioHistory", handleAudioHistory);
     socket.on("receiveAudio", handleReceiveAudio);
-
+    socket.on("userStartedRecording", handleUserStartedRecording);
+    socket.on("userStoppedRecording", handleUserStoppedRecording);
     return () => {
       socket.off("userValidated", handleUserValidated);
       socket.off("roomsList", handleRoomsList);
       socket.off("usersInRoom", handleUsersInRoom);
       socket.off("audioHistory", handleAudioHistory);
       socket.off("receiveAudio", handleReceiveAudio);
+      socket.off("userStartedRecording", handleUserStartedRecording);
+      socket.off("userStoppedRecording", handleUserStoppedRecording);
     };
   }, [currentAudio]);
 
@@ -160,6 +171,7 @@ const WalkieTalkie = () => {
       setCurrentSpeaker(userName);
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
+      socket.emit("userStartedRecording", selectedRoom, userName);
     }
   };
 
@@ -168,6 +180,7 @@ const WalkieTalkie = () => {
       mediaRecorderRef.current.stop();
       setRecordingUser(null)
       setCurrentSpeaker(null)
+      socket.emit("userStoppedRecording", selectedRoom);
     }
   };
 
