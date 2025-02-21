@@ -18,7 +18,7 @@ const WalkieTalkie = () => {
   const [audioHistory, setAudioHistory] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalRoom, setIsModalRoom] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
 
   const { playSound } = useSoundStore();
 
@@ -65,12 +65,12 @@ const WalkieTalkie = () => {
       ]);
 
       setRecordingUser(userName);
-      setIsAudioPlaying(true);
+      setIsAudioPlaying(true); 
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setRecordingUser(null);
-        setIsAudioPlaying(false);
+        setIsAudioPlaying(false); 
       };
 
       audio.play().catch((error) => {
@@ -155,7 +155,7 @@ const WalkieTalkie = () => {
       alert("Alguien ya está hablando. Espera tu turno.");
       return;
     }
-
+    
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
@@ -170,7 +170,6 @@ const WalkieTalkie = () => {
       setRecordingUser(null);
     }
   };
-  
 
   return (
     <div>
@@ -234,7 +233,7 @@ const WalkieTalkie = () => {
             </div>
           </div>
 
-          <div className="flex justify-evenly mt-24 w-[600px] h-96 flex-col border border-zinc-200 rounded-md px-4 py-2">
+          <div className="flex justify-evenly mt-24 w-[600px] h-96 flex-col border border-zinc-200 rounded-md px-4 py-2 no-select">
             <h1 className="font-bold text-2xl text-center text-blue-950">
               Canal: {selectedRoom}
             </h1>
@@ -284,28 +283,30 @@ const WalkieTalkie = () => {
                 (u, index) =>
                   u.userName === username && (
                     <div
-                      key={index}
+                      key={index} 
                       className={`flex justify-center items-center py-3 w-full px-3 mt-10 rounded-md ${
                         recordingUser === u.userName
                           ? "bg-blue-900"
                           : "bg-blue-950"
-                      } ${isAudioPlaying ? "opacity-50" : "cursor-pointer"}`}
-                      onMouseDown={() => startRecording(u.userName)}
-                      onMouseUp={stopRecording}
-                      onTouchStart={(e) => {
-                        e.preventDefault()
-                        startRecording(u.userName);
-                      }}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        stopRecording();
-                      }}
-                      onTouchCancel={(e) => {
-                        e.preventDefault();
-                        stopRecording();
-                      }}
-                      disabled={isAudioPlaying}
-                    >
+                        } ${
+                          isAudioPlaying
+                            ? "opacity-50"
+                            : "cursor-pointer"
+                        }`}
+                        onMouseDown={() => startRecording(u.userName)}
+                        onMouseUp={stopRecording}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          if (!isAudioPlaying) {
+                            startRecording(u.userName);
+                          }
+                        }}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          stopRecording();
+                        }}
+                        disabled={isAudioPlaying}
+                      >
                       <FaMicrophone
                         size={24}
                         className={`${
