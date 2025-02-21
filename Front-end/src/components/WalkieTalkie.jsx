@@ -18,7 +18,7 @@ const WalkieTalkie = () => {
   const [audioHistory, setAudioHistory] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalRoom, setIsModalRoom] = useState(false);
-  const [currentSpeaker, setCurrentSpeaker] = useState(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
 
   const { playSound } = useSoundStore();
 
@@ -38,14 +38,6 @@ const WalkieTalkie = () => {
 
     const handleUsersInRoom = (users) => {
       setUsersInRoom(users);
-    };
-
-    const handleUserStartedRecording = (userName) => {
-      setCurrentSpeaker(userName);
-    };
-
-    const handleUserStoppedRecording = () => {
-      setCurrentSpeaker(null);
     };
 
     const handleAudioHistory = (audios) => {
@@ -73,16 +65,17 @@ const WalkieTalkie = () => {
       ]);
 
       setRecordingUser(userName);
-      setCurrentSpeaker(userName);
+      setIsAudioPlaying(true); 
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setRecordingUser(null);
-        setCurrentSpeaker(null);
+        setIsAudioPlaying(false); 
       };
 
       audio.play().catch((error) => {
         console.error("Error reproduciendo el audio:", error);
+        setIsAudioPlaying(false);
       });
 
       setCurrentAudio(audio);
@@ -93,16 +86,12 @@ const WalkieTalkie = () => {
     socket.on("usersInRoom", handleUsersInRoom);
     socket.on("audioHistory", handleAudioHistory);
     socket.on("receiveAudio", handleReceiveAudio);
-    socket.on("userStartedRecording", handleUserStartedRecording);
-    socket.on("userStoppedRecording", handleUserStoppedRecording);
     return () => {
       socket.off("userValidated", handleUserValidated);
       socket.off("roomsList", handleRoomsList);
       socket.off("usersInRoom", handleUsersInRoom);
       socket.off("audioHistory", handleAudioHistory);
       socket.off("receiveAudio", handleReceiveAudio);
-      socket.off("userStartedRecording", handleUserStartedRecording);
-      socket.off("userStoppedRecording", handleUserStoppedRecording);
     };
   }, [currentAudio]);
 
@@ -162,17 +151,16 @@ const WalkieTalkie = () => {
   }, [selectedRoom]);
 
   const startRecording = (userName) => {
-    if (currentSpeaker) {
+    if (isAudioPlaying) {
       alert("Alguien ya está hablando. Espera tu turno.");
       return;
     }
+    
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
-      setCurrentSpeaker(userName);
       audioChunksRef.current = [];
       mediaRecorderRef.current.start();
-      socket.emit("userStartedRecording", selectedRoom, userName);
     }
   };
 
@@ -180,8 +168,6 @@ const WalkieTalkie = () => {
     if (mediaRecorderRef.current && selectedRoom) {
       mediaRecorderRef.current.stop();
       setRecordingUser(null);
-      setCurrentSpeaker(null);
-      socket.emit("userStoppedRecording", selectedRoom);
     }
   };
 
@@ -249,10 +235,10 @@ const WalkieTalkie = () => {
 
           <div className="flex justify-evenly mt-24 w-[600px] h-96 flex-col border border-zinc-200 rounded-md px-4 py-2">
             <h1 className="font-bold text-2xl text-center text-blue-950">
-              Canal:{selectedRoom}
+              Canal: {selectedRoom}
             </h1>
             <div className="h-70 flex flex-col justify-between">
-              <h3 className="font-semibold ">Historial de Comunicacion</h3>
+              <h3 className="font-semibold">Historial de Comunicacion</h3>
 
               {audioHistory.length > 0 && (
                 <div className="mt-2 overflow-auto">
@@ -278,7 +264,9 @@ const WalkieTalkie = () => {
                               controls
                               src={audioUrl}
                               className="w-full"
-                              onEnded={() => URL.revokeObjectURL(audioUrl)}
+                              onEnded={() => {
+                                URL.revokeObjectURL(audioUrl);
+                              }}
                             />
                             <span className="text-xs text-gray-500 ml-2">
                               {audio.duration ? `0:${audio.duration}` : ""}
@@ -300,12 +288,16 @@ const WalkieTalkie = () => {
                         recordingUser === u.userName
                           ? "bg-blue-900"
                           : "bg-blue-950"
-                      } `}
+                        } ${
+                          isAudioPlaying
+                            ? "opacity-50"
+                            : "cursor-pointer"
+                        }`}
                       onMouseDown={() => startRecording(u.userName)}
                       onMouseUp={stopRecording}
-                      onTouchStart={() => startRecording(u.userName)}
-                      onTouchEnd={stopRecording}
-                      disabled={currentSpeaker && currentSpeaker !== u.userName}
+                      // onTouchStart={() => startRecording(u.userName)}
+                      // onTouchEnd={stopRecording}
+                      disabled={isAudioPlaying}
                     >
                       <FaMicrophone
                         size={24}
