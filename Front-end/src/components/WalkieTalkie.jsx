@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import socket from "../socket";
 import { IoSettingsOutline } from "react-icons/io5";
 import { IoIosAdd } from "react-icons/io";
+import { FaMicrophone } from "react-icons/fa";
 import SettingModal from "./SettingModal";
 import RoomsModal from "./RoomsModal";
 import useSoundStore from "../zustand/useSoundStore";
@@ -42,7 +43,7 @@ const WalkieTalkie = () => {
     const handleUserStartedRecording = (userName) => {
       setCurrentSpeaker(userName);
     };
-  
+
     const handleUserStoppedRecording = () => {
       setCurrentSpeaker(null);
     };
@@ -178,8 +179,8 @@ const WalkieTalkie = () => {
   const stopRecording = () => {
     if (mediaRecorderRef.current && selectedRoom) {
       mediaRecorderRef.current.stop();
-      setRecordingUser(null)
-      setCurrentSpeaker(null)
+      setRecordingUser(null);
+      setCurrentSpeaker(null);
       socket.emit("userStoppedRecording", selectedRoom);
     }
   };
@@ -293,23 +294,28 @@ const WalkieTalkie = () => {
               {usersInRoom.map(
                 (u, index) =>
                   u.userName === username && (
-                    <button
-                      key={index} // Asegúrate de agregar una clave única
-                      className={`py-3 w-full px-3 mt-10 rounded-md text-white ${
+                    <div
+                      key={index} 
+                      className={`flex justify-center items-center py-3 w-full px-3 mt-10 rounded-md ${
                         recordingUser === u.userName
                           ? "bg-blue-900"
                           : "bg-blue-950"
-                      }`}
+                      } `}
                       onMouseDown={() => startRecording(u.userName)}
                       onMouseUp={stopRecording}
                       onTouchStart={() => startRecording(u.userName)}
                       onTouchEnd={stopRecording}
                       disabled={currentSpeaker && currentSpeaker !== u.userName}
                     >
-                      {recordingUser === username
-                        ? "Microfono Activado"
-                        : "Microfono Desactivado"}
-                    </button>
+                      <FaMicrophone
+                        size={24}
+                        className={`${
+                          recordingUser === u.userName
+                            ? "text-white"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    </div>
                   )
               )}
             </div>
