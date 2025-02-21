@@ -293,12 +293,10 @@ const WalkieTalkie = () => {
                             ? "opacity-50"
                             : "cursor-pointer"
                         }`}
-                      onMouseDown={() => startRecording(u.userName)}
-                      onMouseUp={stopRecording}
-                       onTouchStart={() => startRecording(u.userName)}
-                       onTouchEnd={stopRecording}
-                       onTouchCancel={stopRecording}
-                      disabled={isAudioPlaying}
+                        onPointerDown={() => startRecording(u.userName)}
+                        onPointerUp={stopRecording}
+                        onPointerCancel={stopRecording}
+                        disabled={isAudioPlaying}
                     >
                       <FaMicrophone
                         size={24}
