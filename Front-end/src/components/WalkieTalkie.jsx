@@ -2,10 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import socket from "../socket";
 import { IoSettingsOutline } from "react-icons/io5";
 import { IoIosAdd } from "react-icons/io";
+import { SlOptionsVertical } from "react-icons/sl";
+import { FaEdit } from "react-icons/fa";
 import { FaMicrophone } from "react-icons/fa";
+import { MdOutlineDeleteForever } from "react-icons/md";
 import SettingModal from "./SettingModal";
 import RoomsModal from "./RoomsModal";
 import useSoundStore from "../zustand/useSoundStore";
+import { toast, ToastContainer } from "react-toastify";
 
 const WalkieTalkie = () => {
   const [username, setUsername] = useState(""); //input para traer el usuario
@@ -18,7 +22,10 @@ const WalkieTalkie = () => {
   const [audioHistory, setAudioHistory] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalRoom, setIsModalRoom] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null);
+  const [editingRoom, setEditingRoom] = useState(null);
+  const [newRoomName, setNewRoomName] = useState("");
 
   const { playSound } = useSoundStore();
 
@@ -34,6 +41,18 @@ const WalkieTalkie = () => {
 
     const handleRoomsList = (rooms) => {
       setRooms(rooms);
+      if (selectedRoom && !rooms.includes(selectedRoom)) {
+        socket.emit("leaveRoom", selectedRoom, user.name);
+        setSelectedRoom("");
+        setAudioHistory([]);
+        setUsersInRoom([]);
+        setRecordingUser(null);
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+        }
+        setIsAudioPlaying(false);
+      }
     };
 
     const handleUsersInRoom = (users) => {
@@ -65,12 +84,12 @@ const WalkieTalkie = () => {
       ]);
 
       setRecordingUser(userName);
-      setIsAudioPlaying(true); 
+      setIsAudioPlaying(true);
 
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
         setRecordingUser(null);
-        setIsAudioPlaying(false); 
+        setIsAudioPlaying(false);
       };
 
       audio.play().catch((error) => {
@@ -81,6 +100,19 @@ const WalkieTalkie = () => {
       setCurrentAudio(audio);
     };
 
+    const handleRoomNameChanged = ({ oldName, newName }) => {
+      if (selectedRoom === oldName) {
+        setSelectedRoom(newName);
+      }
+    };
+
+    socket.on("editRoomResult", (result) => {
+      if (!result.success) {
+        toast.info(result.message);
+      }
+    });
+
+    socket.on("roomNameChanged", handleRoomNameChanged);
     socket.on("userValidated", handleUserValidated);
     socket.on("roomsList", handleRoomsList);
     socket.on("usersInRoom", handleUsersInRoom);
@@ -92,8 +124,10 @@ const WalkieTalkie = () => {
       socket.off("usersInRoom", handleUsersInRoom);
       socket.off("audioHistory", handleAudioHistory);
       socket.off("receiveAudio", handleReceiveAudio);
+      socket.off("roomNameChanged", handleRoomNameChanged);
+      socket.off("editRoomResult");
     };
-  }, [currentAudio]);
+  }, [currentAudio, selectedRoom, user]);
 
   const handleSubmit = () => {
     socket.emit("userValidate", username);
@@ -152,10 +186,10 @@ const WalkieTalkie = () => {
 
   const startRecording = (userName) => {
     if (isAudioPlaying) {
-      alert("Alguien ya está hablando. Espera tu turno.");
+      toast.info("Alguien ya está hablando. Espera tu turno.");
       return;
     }
-    
+
     playSound("recording");
     if (mediaRecorderRef.current && selectedRoom) {
       setRecordingUser(userName);
@@ -169,6 +203,26 @@ const WalkieTalkie = () => {
       mediaRecorderRef.current.stop();
       setRecordingUser(null);
     }
+  };
+
+  const handleDeleteRoom = (rooms) => {
+    socket.emit("deleteRoom", rooms);
+    toast.warn(`El ${rooms} ha sida eliminado`);
+  };
+
+  const handleEditRoom = (room) => {
+    setEditingRoom(room);
+    setNewRoomName(room);
+    setActiveMenu(null);
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (newRoomName.trim() && newRoomName !== editingRoom) {
+      socket.emit("editRoom", editingRoom, newRoomName.trim());
+      toast.success(`Sala ${editingRoom} a sido renombrada a ${newRoomName}`);
+    }
+    setEditingRoom(null);
   };
 
   return (
@@ -213,22 +267,71 @@ const WalkieTalkie = () => {
                 />
               )}
               {isModalRoom && (
-                <RoomsModal onClose={() => setIsModalRoom(false)} />
+                <RoomsModal
+                  onClose={() => setIsModalRoom(false)}
+                  rooms={rooms}
+                />
               )}
             </div>
             <div className="flex flex-col gap-1.5">
               {rooms.map((room, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleJoinRoom(room)}
-                  className={`w-full text-[#001323] font-bold py-2 px-4 text-left rounded-md ${
-                    selectedRoom === room
-                      ? "bg-blue-500 text-white"
-                      : "bg-white hover:bg-blue-300"
-                  } transition-colors`}
-                >
-                  # {room}
-                </button>
+                <div key={index} className="relative group">
+                  {editingRoom === room ? (
+                    <form onSubmit={handleSaveEdit} className="flex w-full">
+                      <input
+                        type="text"
+                        value={newRoomName}
+                        onChange={(e) => setNewRoomName(e.target.value)}
+                        autoFocus
+                        className="w-full text-[#001323] font-bold py-2 px-4 rounded-md bg-white border border-blue-500"
+                        onBlur={handleSaveEdit}
+                      />
+                    </form>
+                  ) : (
+                    <button
+                      onClick={() => handleJoinRoom(room)}
+                      className={`w-full text-[#001323] font-bold py-2 px-4 text-left rounded-md flex justify-between items-center ${
+                        selectedRoom === room
+                          ? "bg-blue-500 text-white"
+                          : "bg-white hover:bg-blue-300"
+                      } transition-colors`}
+                    >
+                      <span># {room}</span>
+                      {user.isAdmin && (
+                        <div
+                          className="relative cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenu(activeMenu === index ? null : index);
+                          }}
+                        >
+                          <SlOptionsVertical />
+                          {activeMenu === index && (
+                            <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                              <div
+                                className="px-4 py-2 text-gray-800 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditRoom(room);
+                                }}
+                              >
+                                <FaEdit />
+                                Editar
+                              </div>
+                              <div
+                                className="px-4 py-2 text-red-600 hover:bg-gray-100 cursor-pointer flex gap-2 items-center"
+                                onClick={() => handleDeleteRoom(room)}
+                              >
+                                <MdOutlineDeleteForever size={20} />
+                                Eliminar
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -283,30 +386,26 @@ const WalkieTalkie = () => {
                 (u, index) =>
                   u.userName === username && (
                     <div
-                      key={index} 
+                      key={index}
                       className={`flex justify-center items-center py-3 w-full px-3 mt-10 rounded-md ${
                         recordingUser === u.userName
                           ? "bg-blue-900"
                           : "bg-blue-950"
-                        } ${
-                          isAudioPlaying
-                            ? "opacity-50"
-                            : "cursor-pointer"
-                        }`}
-                        onMouseDown={() => startRecording(u.userName)}
-                        onMouseUp={stopRecording}
-                        onTouchStart={(e) => {
-                          e.preventDefault();
-                          if (!isAudioPlaying) {
-                            startRecording(u.userName);
-                          }
-                        }}
-                        onTouchEnd={(e) => {
-                          e.preventDefault();
-                          stopRecording();
-                        }}
-                        disabled={isAudioPlaying}
-                      >
+                      } ${isAudioPlaying ? "opacity-50" : "cursor-pointer"}`}
+                      onMouseDown={() => startRecording(u.userName)}
+                      onMouseUp={stopRecording}
+                      onTouchStart={(e) => {
+                        e.preventDefault();
+                        if (!isAudioPlaying) {
+                          startRecording(u.userName);
+                        }
+                      }}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        stopRecording();
+                      }}
+                      disabled={isAudioPlaying}
+                    >
                       <FaMicrophone
                         size={24}
                         className={`${

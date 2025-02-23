@@ -15,19 +15,62 @@ const socketController = (io) => {
         io.emit("roomsList", rooms);
       }
     });
+
+    socket.on("editRoom", (oldRoomName, newRoomName) => {
+      if (!rooms.includes(oldRoomName) || rooms.includes(newRoomName)) {
+        socket.emit("editRoomResult", {
+          success: false,
+          message: "La sala no existe o el nuevo nombre ya está en uso"
+        });
+        return;
+      }
+
+      const index = rooms.indexOf(oldRoomName);
+      if (index > -1) {
+        rooms[index] = newRoomName;
+
+        if (usersInRooms[oldRoomName]) {
+          usersInRooms[newRoomName] = usersInRooms[oldRoomName];
+          delete usersInRooms[oldRoomName];
+        }
+
+        if (audioHistory[oldRoomName]) {
+          audioHistory[newRoomName] = audioHistory[oldRoomName];
+          delete audioHistory[oldRoomName];
+        }
+
+        io.emit("roomsList", rooms);
+
+        io.to(oldRoomName).emit("roomNameChanged", {
+          oldName: oldRoomName,
+          newName: newRoomName
+        });
+
+        const socketsInRoom = io.sockets.adapter.rooms.get(oldRoomName);
+        if (socketsInRoom) {
+          socketsInRoom.forEach(socketId => {
+            const clientSocket = io.sockets.sockets.get(socketId);
+            if (clientSocket) {
+              clientSocket.leave(oldRoomName);
+              clientSocket.join(newRoomName);
+            }
+          });
+        }
+      }
+    });
     
     socket.on("deleteRoom", (roomToDelete) => {
       if (!rooms.includes(roomToDelete)) return;
 
-      const roomsDelete = rooms.filter((room) => room !== roomToDelete);
+      const index = rooms.indexOf(roomToDelete);
+      if (index > -1) {
+        rooms.splice(index, 1);
+      }
 
       delete usersInRooms[roomToDelete];
-
       delete audioHistory[roomToDelete];
 
-      io.emit("roomsList", roomsDelete);
-      
-      console.log(`Room eliminada: ${roomToDelete}`);
+      io.emit("roomsList", rooms);
     });
 
     socket.on("userValidate", async (userName) => {
@@ -38,16 +81,11 @@ const socketController = (io) => {
         }
       } catch (error) {
         console.error("Error al validar usuario:", error);
-        socket.emit("userValidated", {
-          success: false,
-          message: "Error en el servidor",
-        });
       }
     });
 
     socket.on("joinRoom", (room, userName) => {
       socket.join(room);
-      console.log(`Usuario ${userName} se unió a la room: ${room}`);
 
       if (!usersInRooms[room]) {
         usersInRooms[room] = [];
@@ -58,12 +96,10 @@ const socketController = (io) => {
       }
 
       io.to(room).emit("usersInRoom", usersInRooms[room]);
-      socket.emit("message", `Bienvenido a la room: ${room}`);
     });
 
     socket.on("leaveRoom", (room, userName) => {
       socket.leave(room);
-      console.log(`Usuario ${userName} salió de la room: ${room}`);
 
       if (usersInRooms[room]) {
         usersInRooms[room] = usersInRooms[room].filter(
@@ -91,7 +127,6 @@ const socketController = (io) => {
       io.to(room).emit("audioHistory", audioHistory[room]);
     });
 
-    // Permitir que un usuario recupere los audios de un room cuando entra
     socket.on("getAudioHistory", (room) => {
       if (audioHistory[room]) {
         socket.emit("audioHistory", audioHistory[room]);
