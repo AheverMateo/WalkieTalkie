@@ -56,6 +56,10 @@ const socketController = (io) => {
             }
           });
         }
+        socket.emit("editRoomResult", {
+          success: true,
+          message: "Sala renombrada"
+        });
       }
     });
     

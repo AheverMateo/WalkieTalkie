@@ -107,8 +107,10 @@ const WalkieTalkie = () => {
     };
 
     socket.on("editRoomResult", (result) => {
-      if (!result.success) {
-        toast.info(result.message);
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message)
       }
     });
 
@@ -220,7 +222,6 @@ const WalkieTalkie = () => {
     e.preventDefault();
     if (newRoomName.trim() && newRoomName !== editingRoom) {
       socket.emit("editRoom", editingRoom, newRoomName.trim());
-      toast.success(`Sala ${editingRoom} a sido renombrada a ${newRoomName}`);
     }
     setEditingRoom(null);
   };
@@ -396,9 +397,7 @@ const WalkieTalkie = () => {
                       onMouseUp={stopRecording}
                       onTouchStart={(e) => {
                         e.preventDefault();
-                        if (!isAudioPlaying) {
                           startRecording(u.userName);
-                        }
                       }}
                       onTouchEnd={(e) => {
                         e.preventDefault();
